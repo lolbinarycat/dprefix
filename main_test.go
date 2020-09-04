@@ -11,6 +11,10 @@ import (
 )
 
 func TestGetRaw(t *testing.T) {
+	if testing.Short() {
+		t.SkipNow()
+	}
+	
 	t.Log("starting")
 	go func() {
 		time.Sleep(time.Second * 10)
@@ -28,6 +32,10 @@ func TestGetRaw(t *testing.T) {
 }
 
 func TestLookupString(t *testing.T) {
+	if testing.Short() {
+		t.SkipNow()
+	}
+
 	X, err := xgbutil.NewConn()
 	if err != nil {
 		t.Fatal(err)
@@ -39,6 +47,10 @@ func TestLookupString(t *testing.T) {
 	//t.Log(GetString())
 }
 
-func TestGetString(t *testing.T) {
-	t.Log(GetString())
-}
+// func TestGetString(t *testing.T) {
+// 	t.Log(GetString())
+// }
+
+func TestGetKeyWithMods(t *testing.T) {
+	t.Log(GetKeyWithMods())
+} 

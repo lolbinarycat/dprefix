@@ -4,7 +4,7 @@ package dprefix
 import (
 	"os"
 	"log"
-	"fmt"
+	"strings"
 	
 	"github.com/BurntSushi/xgbutil"
 	"github.com/BurntSushi/xgbutil/keybind"
@@ -15,6 +15,11 @@ func init() {
 	log.SetOutput(os.Stderr)
 }
 
+// GetRaw grabs the keyboard on the root window until
+// a key is pressed, then returns the raw event for that key.
+// It also returns the X connection it openes,
+// which is useful if you need to use functions such as
+// keybind.LookupString.
 func GetRaw() (xevent.KeyPressEvent, *xgbutil.XUtil) {
 	X, err := xgbutil.NewConn()
 	if err != nil {
@@ -25,16 +30,15 @@ func GetRaw() (xevent.KeyPressEvent, *xgbutil.XUtil) {
 	return <-keyCh, X
 }
 
-func GetString() string {
+// GetKeyWithMods returns the textual representation of a key,
+// such as "w" or " ", along with a slice of
+// the modifiers pressed, in the format of "mod1", "mod2", etc.
+func GetKeyWithMods() (key string, mods []string) {
 	e, X := GetRaw()
 	modStr := keybind.ModifierString(e.State)
-	keyStr := keybind.LookupString(X, e.State, e.Detail)
-	if len(modStr) > 0 {
-		return fmt.Sprintf("Key: %s-%s\n", modStr, keyStr)
-	} else {
-		return fmt.Sprintln("Key:", keyStr)
-	}
-	
+	key = keybind.LookupString(X, e.State, e.Detail)
+	mods = strings.Split(modStr,"-")
+	return key, mods
 }
 
 // NextKeyPressChan grabs the next key press on the root window and sends it through a channel.
