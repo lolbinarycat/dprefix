@@ -18,7 +18,11 @@ func TestGetRaw(t *testing.T) {
 		t.FailNow()
 	} ()
 
-	k := GetRaw()
+	k, _ := GetRaw()
 	t.Log(k)
 	t.Log(k.String())
+}
+
+func TestGetString(t *testing.T) {
+	t.Log(GetString())
 }

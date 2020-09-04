@@ -4,6 +4,7 @@ package dprefix
 import (
 	"os"
 	"log"
+	"fmt"
 	
 	"github.com/BurntSushi/xgbutil"
 	"github.com/BurntSushi/xgbutil/keybind"
@@ -14,14 +15,25 @@ func init() {
 	log.SetOutput(os.Stderr)
 }
 
-func GetRaw() (xevent.KeyPressEvent) {
+func GetRaw() (xevent.KeyPressEvent, *xgbutil.XUtil) {
 	X, err := xgbutil.NewConn()
 	if err != nil {
 		log.Fatal(err)
 	}
 	keyCh := NextKeyPressChan(X)
-	//defer close(keyCh)
-	return <-keyCh
+	return <-keyCh, X
+}
+
+func GetString() string {
+	e, X := GetRaw()
+	modStr := keybind.ModifierString(e.State)
+	keyStr := keybind.LookupString(X, e.State, e.Detail)
+	if len(modStr) > 0 {
+		return fmt.Sprintf("Key: %s-%s\n", modStr, keyStr)
+	} else {
+		return fmt.Sprintln("Key:", keyStr)
+	}
+	
 }
 
 // NextKeyPressChan grabs the next key press on the root window and sends it through a channel.
