@@ -20,6 +20,7 @@ func GetRaw() (xevent.KeyPressEvent, *xgbutil.XUtil) {
 	if err != nil {
 		log.Fatal(err)
 	}
+	keybind.Initialize(X)
 	keyCh := NextKeyPressChan(X)
 	return <-keyCh, X
 }
