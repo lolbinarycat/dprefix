@@ -49,12 +49,6 @@ func GetString() string {
 	return modStr + "-" + key
 }
 
-// GetEmacs returns the emacs representation of the keys pressed,
-// with Alt mapped to Meta.
-func GetEmacs() string {
-	return "Not Implemented"
-}
-
 // NextKeyPressChan grabs the next key press on the root window and sends it through a channel.
 // If ignoreMods is true, events caused by pressing a modifier key will
 // be ignored (modifier data for other events will be unchanged) 
