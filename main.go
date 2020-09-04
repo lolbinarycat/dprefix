@@ -17,21 +17,23 @@ import (
 // It also returns the X connection it openes,
 // which is useful if you need to use functions such as
 // keybind.LookupString.
-func GetRaw() (xevent.KeyPressEvent, *xgbutil.XUtil) {
+func GetRaw() (xevent.KeyPressEvent, *xgbutil.XUtil, bool) {
 	X, err := xgbutil.NewConn()
 	if err != nil {
 		panic(err)
 	}
 	keybind.Initialize(X)
 	keyCh := NextKeyPressChan(X,true,time.Second*10)
-	return <-keyCh, X
+	key, ok := <-keyCh
+	return key, X, ok
 }
 
 // GetKeyWithMods returns the textual representation of a key,
 // such as "w" or " ", along with a slice of
 // the modifiers pressed, in the format of "mod1", "mod2", etc.
 func GetKeyWithMods() (key string, mods []string) {
-	e, X := GetRaw()
+	e, X, _ := GetRaw()
+	// TODO: handle error
 	modStr := keybind.ModifierString(e.State)
 	key = keybind.LookupString(X, e.State, e.Detail)
 	mods = strings.Split(modStr,"-")
@@ -40,14 +42,15 @@ func GetKeyWithMods() (key string, mods []string) {
 
 // GetString returns the keys pressed in the form of "mod1-shift-a".
 // The last charachter should always be the key pressed.
-func GetString() string {
-	e, X := GetRaw()
+func GetString() (string, bool) {
+	e, X, ok := GetRaw()
+	if !ok {return "",false}
 	modStr := keybind.ModifierString(e.State)
 	key := keybind.LookupString(X, e.State, e.Detail)
 	if len(modStr) == 0 {
-		return key
+		return key, true
 	}
-	return modStr + "-" + key
+	return modStr + "-" + key, true
 }
 
 // NextKeyPressChan grabs the next key press on the root window and sends it through a channel.
@@ -60,6 +63,7 @@ func NextKeyPressChan(X *xgbutil.XUtil, ignoreMods bool, timeout time.Duration) 
 	if timeout > 0 {
 		go func () {
 			time.Sleep(timeout)
+			keybind.UngrabKeyboard(X)
 			xevent.Quit(X)
 			close(keyChan)
 		} ()
@@ -80,6 +84,7 @@ func NextKeyPressChan(X *xgbutil.XUtil, ignoreMods bool, timeout time.Duration) 
 			// } else {
 			// 	log.Println("Key:", keyStr)
 			// }
+			keybind.UngrabKeyboard(X)
 			xevent.Quit(X)
 		}).Connect(X,X.RootWin())
 	keybind.GrabKeyboard(X, X.RootWin())
