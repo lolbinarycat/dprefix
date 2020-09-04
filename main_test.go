@@ -8,6 +8,7 @@ import (
 	"github.com/BurntSushi/xgbutil/keybind"
 	"github.com/BurntSushi/xgbutil"
 	"github.com/BurntSushi/xgb/xproto"
+	"github.com/BurntSushi/xgbutil/xevent"
 )
 
 func TestGetRaw(t *testing.T) {
@@ -26,16 +27,13 @@ func TestGetRaw(t *testing.T) {
 		t.FailNow()
 	} ()
 
-	k, _ := GetRaw()
+	k, X := GetRaw()
+	defer xevent.Quit(X)
 	t.Log(k)
 	t.Log(k.String())
 }
 
 func TestLookupString(t *testing.T) {
-	if testing.Short() {
-		t.SkipNow()
-	}
-
 	X, err := xgbutil.NewConn()
 	if err != nil {
 		t.Fatal(err)
@@ -47,10 +45,13 @@ func TestLookupString(t *testing.T) {
 	//t.Log(GetString())
 }
 
-// func TestGetString(t *testing.T) {
-// 	t.Log(GetString())
-// }
+func TestGetString(t *testing.T) {
+	t.Log(GetString())
+}
 
 func TestGetKeyWithMods(t *testing.T) {
+	if testing.Short() {
+		t.SkipNow()
+	}
 	t.Log(GetKeyWithMods())
 } 

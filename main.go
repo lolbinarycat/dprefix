@@ -41,6 +41,24 @@ func GetKeyWithMods() (key string, mods []string) {
 	return key, mods
 }
 
+// GetString returns the keys pressed in the form of "mod1-shift-a".
+// The last charachter should always be the key pressed.
+func GetString() string {
+	e, X := GetRaw()
+	modStr := keybind.ModifierString(e.State)
+	key := keybind.LookupString(X, e.State, e.Detail)
+	if len(modStr) == 0 {
+		return key
+	}
+	return modStr + "-" + key
+}
+
+// GetEmacs returns the emacs representation of the keys pressed,
+// with Alt mapped to Meta.
+func GetEmacs() string {
+	return "Not Implemented"
+}
+
 // NextKeyPressChan grabs the next key press on the root window and sends it through a channel.
 // Note that the returned channel is only valid for one key press
 func NextKeyPressChan(X *xgbutil.XUtil) <-chan xevent.KeyPressEvent {
