@@ -5,6 +5,7 @@ import (
 	//"os"
 	"strings"
 	"time"
+	"errors"
 	
 	"github.com/BurntSushi/xgbutil"
 	"github.com/BurntSushi/xgbutil/keybind"
@@ -17,23 +18,21 @@ import (
 // It also returns the X connection it openes,
 // which is useful if you need to use functions such as
 // keybind.LookupString.
-func GetRaw() (xevent.KeyPressEvent, *xgbutil.XUtil, bool) {
+func GetRaw() (xevent.KeyPressEvent, *xgbutil.XUtil) {
 	X, err := xgbutil.NewConn()
 	if err != nil {
 		panic(err)
 	}
 	keybind.Initialize(X)
 	keyCh := NextKeyPressChan(X,true,time.Second*10)
-	key, ok := <-keyCh
-	return key, X, ok
+	return <-keyCh, X
 }
 
 // GetKeyWithMods returns the textual representation of a key,
 // such as "w" or " ", along with a slice of
 // the modifiers pressed, in the format of "mod1", "mod2", etc.
 func GetKeyWithMods() (key string, mods []string) {
-	e, X, _ := GetRaw()
-	// TODO: handle error
+	e, X := GetRaw()
 	modStr := keybind.ModifierString(e.State)
 	key = keybind.LookupString(X, e.State, e.Detail)
 	mods = strings.Split(modStr,"-")
@@ -42,15 +41,14 @@ func GetKeyWithMods() (key string, mods []string) {
 
 // GetString returns the keys pressed in the form of "mod1-shift-a".
 // The last charachter should always be the key pressed.
-func GetString() (string, bool) {
-	e, X, ok := GetRaw()
-	if !ok {return "",false}
+func GetString() (string) {
+	e, X  := GetRaw()
 	modStr := keybind.ModifierString(e.State)
 	key := keybind.LookupString(X, e.State, e.Detail)
 	if len(modStr) == 0 {
-		return key, true
+		return key
 	}
-	return modStr + "-" + key, true
+	return modStr + "-" + key
 }
 
 // NextKeyPressChan grabs the next key press on the root window and sends it through a channel.
@@ -58,16 +56,9 @@ func GetString() (string, bool) {
 // be ignored (modifier data for other events will be unchanged)
 // A timeout of less than 1 implies no timeout.
 // Note that the returned channel is only valid for one key press.
-func NextKeyPressChan(X *xgbutil.XUtil, ignoreMods bool, timeout time.Duration) <-chan xevent.KeyPressEvent {
+func NextKeyPressChan(X *xgbutil.XUtil, ignoreMods bool) <-chan xevent.KeyPressEvent {
 	keyChan := make(chan xevent.KeyPressEvent)
-	if timeout > 0 {
-		go func () {
-			time.Sleep(timeout)
-			keybind.UngrabKeyboard(X)
-			xevent.Quit(X)
-			close(keyChan)
-		} ()
-	}
+
 	
 	xevent.KeyPressFun(
 		func(X *xgbutil.XUtil, e xevent.KeyPressEvent) {
@@ -86,8 +77,9 @@ func NextKeyPressChan(X *xgbutil.XUtil, ignoreMods bool, timeout time.Duration) 
 			// }
 			keybind.UngrabKeyboard(X)
 			xevent.Quit(X)
+			close(keyChan)
 		}).Connect(X,X.RootWin())
 	keybind.GrabKeyboard(X, X.RootWin())
-	go xevent.Main(X)
+	xevent.Main(X)
 	return keyChan
 }
