@@ -4,6 +4,7 @@ package dprefix
 import (
 	//"os"
 	"strings"
+	"time"
 	
 	"github.com/BurntSushi/xgbutil"
 	"github.com/BurntSushi/xgbutil/keybind"
@@ -22,7 +23,7 @@ func GetRaw() (xevent.KeyPressEvent, *xgbutil.XUtil) {
 		panic(err)
 	}
 	keybind.Initialize(X)
-	keyCh := NextKeyPressChan(X,true)
+	keyCh := NextKeyPressChan(X,true,time.Second*10)
 	return <-keyCh, X
 }
 
@@ -51,10 +52,19 @@ func GetString() string {
 
 // NextKeyPressChan grabs the next key press on the root window and sends it through a channel.
 // If ignoreMods is true, events caused by pressing a modifier key will
-// be ignored (modifier data for other events will be unchanged) 
+// be ignored (modifier data for other events will be unchanged)
+// A timeout of less than 1 implies no timeout.
 // Note that the returned channel is only valid for one key press.
-func NextKeyPressChan(X *xgbutil.XUtil, ignoreMods bool) <-chan xevent.KeyPressEvent {
+func NextKeyPressChan(X *xgbutil.XUtil, ignoreMods bool, timeout time.Duration) <-chan xevent.KeyPressEvent {
 	keyChan := make(chan xevent.KeyPressEvent)
+	if timeout > 0 {
+		go func () {
+			time.Sleep(timeout)
+			xevent.Quit(X)
+			close(keyChan)
+		} ()
+	}
+	
 	xevent.KeyPressFun(
 		func(X *xgbutil.XUtil, e xevent.KeyPressEvent) {
 			if ignoreMods && keybind.ModGet(X,e.Detail) != 0 {
