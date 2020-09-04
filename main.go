@@ -22,7 +22,7 @@ func GetRaw() (xevent.KeyPressEvent, *xgbutil.XUtil) {
 		panic(err)
 	}
 	keybind.Initialize(X)
-	keyCh := NextKeyPressChan(X)
+	keyCh := NextKeyPressChan(X,true)
 	return <-keyCh, X
 }
 
@@ -56,11 +56,18 @@ func GetEmacs() string {
 }
 
 // NextKeyPressChan grabs the next key press on the root window and sends it through a channel.
-// Note that the returned channel is only valid for one key press
-func NextKeyPressChan(X *xgbutil.XUtil) <-chan xevent.KeyPressEvent {
+// If ignoreMods is true, events caused by pressing a modifier key will
+// be ignored (modifier data for other events will be unchanged) 
+// Note that the returned channel is only valid for one key press.
+func NextKeyPressChan(X *xgbutil.XUtil, ignoreMods bool) <-chan xevent.KeyPressEvent {
 	keyChan := make(chan xevent.KeyPressEvent)
 	xevent.KeyPressFun(
 		func(X *xgbutil.XUtil, e xevent.KeyPressEvent) {
+			if ignoreMods && keybind.ModGet(X,e.Detail) != 0 {
+				// ModGet returns 0 if the given
+				// keycode isn't a modifier
+				return
+			}
 			keyChan <- e
 			// modStr := keybind.ModifierString(e.State)
 			// keyStr := keybind.LookupString(X, e.State, e.Detail)
