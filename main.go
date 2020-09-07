@@ -4,8 +4,7 @@ package dprefix
 import (
 	//"os"
 	"strings"
-	"time"
-	"errors"
+	"log"
 	
 	"github.com/BurntSushi/xgbutil"
 	"github.com/BurntSushi/xgbutil/keybind"
@@ -24,7 +23,9 @@ func GetRaw() (xevent.KeyPressEvent, *xgbutil.XUtil) {
 		panic(err)
 	}
 	keybind.Initialize(X)
-	keyCh := NextKeyPressChan(X,true,time.Second*10)
+	log.Println("GetRaw: getting channel")
+	keyCh := NextKeyPressChan(X,true)
+	log.Println("GetRaw: got channel, reading from channel")
 	return <-keyCh, X
 }
 
@@ -43,8 +44,10 @@ func GetKeyWithMods() (key string, mods []string) {
 // The last charachter should always be the key pressed.
 func GetString() (string) {
 	e, X  := GetRaw()
+	log.Println("GetString: got response from GetRaw")
 	modStr := keybind.ModifierString(e.State)
 	key := keybind.LookupString(X, e.State, e.Detail)
+	log.Println("GetString: decoded key as",key)
 	if len(modStr) == 0 {
 		return key
 	}
@@ -57,17 +60,21 @@ func GetString() (string) {
 // A timeout of less than 1 implies no timeout.
 // Note that the returned channel is only valid for one key press.
 func NextKeyPressChan(X *xgbutil.XUtil, ignoreMods bool) <-chan xevent.KeyPressEvent {
-	keyChan := make(chan xevent.KeyPressEvent)
-
-	
+	keyChan := make(chan xevent.KeyPressEvent,1)
 	xevent.KeyPressFun(
-		func(X *xgbutil.XUtil, e xevent.KeyPressEvent) {
+		func(X2 *xgbutil.XUtil, e xevent.KeyPressEvent) {
+			if (X) != (X2) {
+				panic("x connections are not the same")
+			}
 			if ignoreMods && keybind.ModGet(X,e.Detail) != 0 {
 				// ModGet returns 0 if the given
 				// keycode isn't a modifier
+				log.Println("got event, but it was a modifier and ignoreMods was set")
 				return
 			}
+			log.Println("got event, sending it through channel")
 			keyChan <- e
+			log.Println("sent event through channel")
 			// modStr := keybind.ModifierString(e.State)
 			// keyStr := keybind.LookupString(X, e.State, e.Detail)
 			// if len(modStr) > 0 {
@@ -77,6 +84,7 @@ func NextKeyPressChan(X *xgbutil.XUtil, ignoreMods bool) <-chan xevent.KeyPressE
 			// }
 			keybind.UngrabKeyboard(X)
 			xevent.Quit(X)
+			X.Ungrab()
 			close(keyChan)
 		}).Connect(X,X.RootWin())
 	keybind.GrabKeyboard(X, X.RootWin())
